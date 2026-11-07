@@ -79,19 +79,6 @@ jobs:
           helm template ${{ env.HELM_RELEASE_NAME }} ./guia-10/devops-portfolio -f ./guia-10/devops-portfolio/values.yaml > manifests-rendered-prod.yaml
 
       # =========================================================================
-      # 2A. OWASP ZAP DAST (TP13C)
-      # =========================================================================
-      - name: Ejecutar OWASP ZAP Baseline Scan
-        run: |
-          docker run --rm \
-            -v $(pwd)/reports-json:/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-            -t https://public-firing-range.appspot.com \
-            -J zap-report.json \
-            -I || true
-
-      # =========================================================================
       # 2A. THREAGILE THREAT MODELING (TP14)
       # =========================================================================
       - name: Ejecutar Threagile Threat Model
@@ -186,11 +173,6 @@ jobs:
               echo "  [WARN] Archivo $FILE_PATH no encontrado, omitiendo..."
             fi
           }
-
-          # -------------------------------------------------------------
-          # Importación de OWASP ZAP (TP13C)
-          # -------------------------------------------------------------
-          upload_scan "ZAP Scan" "reports-json/zap-report.json"
 
           # -------------------------------------------------------------
           # Importación de Threagile Threat Model (TP14)
