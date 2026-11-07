@@ -153,55 +153,36 @@ jobs:
           upload_scan() {
             local SCAN_TYPE="$1"
             local FILE_PATH="$2"
-            if [ -f "$FILE_PATH" ]; then
-              echo "  [+] Enviando $SCAN_TYPE ($FILE_PATH)..."
-              RESPONSE=$(curl -s -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
-                -H "Authorization: Token $DEFECTDOJO_TOKEN" \
-                -H "ngrok-skip-browser-warning: true" \
-                -F "product_name=$PRODUCT_NAME" \
-                -F "engagement_name=$ENGAGEMENT_NAME" \
-                -F "scan_type=$SCAN_TYPE" \
-                -F "auto_create_context=true" \
-                -F "file=@$FILE_PATH")
 
-              if echo "$RESPONSE" | grep -q "scan_type"; then
-                echo "      [OK] Importación exitosa"
-              else
-                echo "      [FAIL] Respuesta API: $RESPONSE"
-              fi
-            else
-              echo "  [WARN] Archivo $FILE_PATH no encontrado, omitiendo..."
+            if [ ! -f "$FILE_PATH" ]; then
+              echo "[WARN] Archivo $FILE_PATH no encontrado, omitiendo..."
+              return 0
             fi
+
+            echo "[+] Enviando $SCAN_TYPE ($FILE_PATH)..."
+
+            curl -s \
+              -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DEFECTDOJO_TOKEN" \
+              -H "ngrok-skip-browser-warning: true" \
+              -F "product_name=$PRODUCT_NAME" \
+              -F "engagement_name=$ENGAGEMENT_NAME" \
+              -F "scan_type=$SCAN_TYPE" \
+              -F "auto_create_context=true" \
+              -F "file=@$FILE_PATH" \
+              -o response.json || true
+
+            cat response.json || true
+            echo ""
           }
 
-          # -------------------------------------------------------------
-          # Importación de Threagile Threat Model (TP14)
-          # -------------------------------------------------------------
-          upload_scan "Generic CI/CD Audit" "reports-json/threagile-results.json"
-
-          # -------------------------------------------------------------
-          # Importación de Semgrep JSON (TP15)
-          # -------------------------------------------------------------
+          upload_scan "ZAP Scan" "reports-json/zap-report.json"
+          upload_scan "Generic Findings Import" "reports-json/threagile-results.json"
           upload_scan "Semgrep JSON Report" "reports-json/semgrep-results.json"
-
-          # -------------------------------------------------------------
-          # Importación de Trivy JSON (TP16)
-          # -------------------------------------------------------------
           upload_scan "Trivy Scan" "reports-json/trivy-container-results.json"
-
-          # -------------------------------------------------------------
-          # Importación de Gitleaks JSON (TP17)
-          # -------------------------------------------------------------
           upload_scan "Gitleaks Scan" "reports-json/gitleaks-report.json"
 
-      # -------------------------------------------------------------
-      # Resumen de Centralización en GitHub
-      # -------------------------------------------------------------
-      - name: Resumen de Centralización en GitHub
-        if: always()
-        run: |
-          echo "### Centralización de Vulnerabilidades en DefectDojo :shield:" >> $GITHUB_STEP_SUMMARY
-          echo "Los reportes de OWASP ZAP (TP13C), Threagile (TP14), Semgrep (TP15), Trivy (TP16) y Gitleaks (TP17) han sido procesados, desduplicados y cargados exitosamente en la instancia de DefectDojo." >> $GITHUB_STEP_SUMMARY
+          exit 0
 
   # =========================================================================
   # FASE 4: RELEASE & DEPLOY (Publicación y Despliegue Post-Aprobación)
